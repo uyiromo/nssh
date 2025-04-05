@@ -6,6 +6,8 @@ if [ -f /etc/debian_version ]; then
     sudo apt install automake autoconf libssl-dev
 elif [ -f /etc/redhat-release ] || [ -f /etc/fedora-release ]; then
     sudo dnf install automake autoconf openssl-devel
+elif [ -f /etc/SuSE-release ] || [ -f /etc/SUSE-brand ] || grep -q "openSUSE" /etc/os-release 2>/dev/null; then
+    sudo zypper install automake autoconf libopenssl-devel
 else
     echo "Unsupported OS"
     exit 1
