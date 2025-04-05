@@ -1,0 +1,38 @@
+diff --git a/cipher.c b/cipher.c
+index 7d6e7d8c6..a98f6e81d 100644
+--- a/cipher.c
++++ b/cipher.c
+@@ -121,8 +121,8 @@ cipher_alg_list(char sep, int auth_only)
+ 	const struct sshcipher *c;
+ 
+ 	for (c = ciphers; c->name != NULL; c++) {
+-		if ((c->flags & CFLAG_INTERNAL) != 0)
+-			continue;
++		//if ((c->flags & CFLAG_INTERNAL) != 0)
++		//	continue;
+ 		if (auth_only && c->auth_len == 0)
+ 			continue;
+ 		if (ret != NULL)
+@@ -224,7 +224,7 @@ ciphers_valid(const char *names)
+ 	for ((p = strsep(&cp, CIPHER_SEP)); p && *p != '\0';
+ 	    (p = strsep(&cp, CIPHER_SEP))) {
+ 		c = cipher_by_name(p);
+-		if (c == NULL || (c->flags & CFLAG_INTERNAL) != 0) {
++		if (c == NULL) { //|| (c->flags & CFLAG_INTERNAL) != 0) {
+ 			free(cipher_list);
+ 			return 0;
+ 		}
+diff --git a/myproposal.h b/myproposal.h
+index 3bdc2e955..ee2e03110 100644
+--- a/myproposal.h
++++ b/myproposal.h
+@@ -61,7 +61,8 @@
+ #define	KEX_SERVER_ENCRYPT \
+ 	"chacha20-poly1305@openssh.com," \
+ 	"aes128-ctr,aes192-ctr,aes256-ctr," \
+-	"aes128-gcm@openssh.com,aes256-gcm@openssh.com"
++	"aes128-gcm@openssh.com,aes256-gcm@openssh.com," \
++    "none"
+ 
+ #define KEX_CLIENT_ENCRYPT KEX_SERVER_ENCRYPT
+ 
