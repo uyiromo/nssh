@@ -1,0 +1,80 @@
+diff --git a/mac.c b/mac.c
+index f3dda6692..7274349f0 100644
+--- a/mac.c
++++ b/mac.c
+@@ -41,6 +41,7 @@
+ 
+ #include "openbsd-compat/openssl-compat.h"
+ 
++#define SSH_NOMAC   -1	/* no MAC */
+ #define SSH_DIGEST	1	/* SSH_DIGEST_XXX */
+ #define SSH_UMAC	2	/* UMAC (not integrated with OpenSSL) */
+ #define SSH_UMAC128	3
+@@ -76,6 +77,9 @@ static const struct macalg macs[] = {
+ 	{ "umac-64-etm@openssh.com",		SSH_UMAC, 0, 0, 128, 64, 1 },
+ 	{ "umac-128-etm@openssh.com",		SSH_UMAC128, 0, 0, 128, 128, 1 },
+ 
++    /* NO MAC */
++    { "none",				SSH_NOMAC, 0, 0, 0, 0, 0 },
++
+ 	{ NULL,					0, 0, 0, 0, 0, 0 }
+ };
+ 
+@@ -106,7 +110,12 @@ static int
+ mac_setup_by_alg(struct sshmac *mac, const struct macalg *macalg)
+ {
+ 	mac->type = macalg->type;
+-	if (mac->type == SSH_DIGEST) {
++    if (macalg->type == SSH_NOMAC) {
++        mac->mac_len = 0;
++        mac->key_len = 0;
++        mac->hmac_ctx = NULL;
++        mac->umac_ctx = NULL;
++    } else if (mac->type == SSH_DIGEST) {
+ 		if ((mac->hmac_ctx = ssh_hmac_start(macalg->alg)) == NULL)
+ 			return SSH_ERR_ALLOC_FAIL;
+ 		mac->key_len = mac->mac_len = ssh_hmac_bytes(macalg->alg);
+@@ -142,6 +151,8 @@ mac_init(struct sshmac *mac)
+ 	if (mac->key == NULL)
+ 		return SSH_ERR_INVALID_ARGUMENT;
+ 	switch (mac->type) {
++    case SSH_NOMAC:
++        return 0;
+ 	case SSH_DIGEST:
+ 		if (mac->hmac_ctx == NULL ||
+ 		    ssh_hmac_init(mac->hmac_ctx, mac->key, mac->key_len) < 0)
+@@ -176,6 +187,9 @@ mac_compute(struct sshmac *mac, u_int32_t seqno,
+ 		return SSH_ERR_INTERNAL_ERROR;
+ 
+ 	switch (mac->type) {
++    case SSH_NOMAC:
++        memset(u.m, 0, sizeof(u.m));
++        break;
+ 	case SSH_DIGEST:
+ 		put_u32(b, seqno);
+ 		/* reset HMAC context */
+@@ -214,7 +228,9 @@ mac_check(struct sshmac *mac, u_int32_t seqno,
+ 	u_char ourmac[SSH_DIGEST_MAX_LENGTH];
+ 	int r;
+ 
+-	if (mac->mac_len > mlen)
++    if (mac->type == SSH_NOMAC) {
++        return 0;
++    } else if (mac->mac_len > mlen)
+ 		return SSH_ERR_INVALID_ARGUMENT;
+ 	if ((r = mac_compute(mac, seqno, data, dlen,
+ 	    ourmac, sizeof(ourmac))) != 0)
+diff --git a/myproposal.h b/myproposal.h
+index 3bdc2e955..79b2e11fd 100644
+--- a/myproposal.h
++++ b/myproposal.h
+@@ -75,7 +75,8 @@
+ 	"umac-128@openssh.com," \
+ 	"hmac-sha2-256," \
+ 	"hmac-sha2-512," \
+-	"hmac-sha1"
++	"hmac-sha1," \
++    "none"
+ 
+ #define KEX_CLIENT_MAC KEX_SERVER_MAC
+ 
